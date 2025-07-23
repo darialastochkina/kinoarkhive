@@ -1,5 +1,5 @@
-import { type MovieData, getYearFromDate, getPosterUrl, getBackdropUrl, preloadedMovies } from "./movie-database"
-import type { Movie } from "@/app/page"
+import { type MovieData, getYearFromDate, getPosterUrl, getBackdropUrl, movieDatabase as preloadedMovies } from "./movie-database"
+import type { Movie } from "@/lib/tmdb-service"
 
 // Класс для работы с фильмами
 export class MovieService {
@@ -168,7 +168,7 @@ export class MovieService {
       tmdbId: movieData.id,
       title: movieData.title,
       originalTitle: movieData.original_title,
-      year: getYearFromDate(movieData.release_date),
+      year: getYearFromDate(movieData.release_date) || 0,
       genre: movieData.genre_ids.map((id) => id.toString()),
       description: movieData.overview || "",
       posterUrl: getPosterUrl(movieData.poster_path),
@@ -176,6 +176,7 @@ export class MovieService {
       isFavorite: false,
       rating: movieData.vote_average,
       popularity: movieData.popularity,
+      mediaType: "movie", // По умолчанию фильм
     }
   }
 }

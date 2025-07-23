@@ -60,6 +60,11 @@ export interface Movie {
   seasons?: number // Для сериалов
   episodes?: number // Для сериалов
   popularity?: number // Добавляем поле популярности
+  isInWatchlist?: boolean // Для списка "Посмотрю позже"
+  isWatched?: boolean // Для списка "Просмотрено"
+  userRating?: number // Оценка пользователя 1-5
+  userComment?: string // Комментарий пользователя
+  watchedAt?: string // Дата просмотра
 }
 
 // Локальная база данных (расширенная с сериалами)
@@ -421,22 +426,37 @@ class TMDBService {
     query: string,
     mediaType: "all" | "movie" | "tv" = "all",
   ): { movies: Movie[]; totalResults: number; source: "local" } {
-    const searchLower = query.toLowerCase()
-    let results = this.moviePool.filter(
+    const searchLower = query.toLowerCase().trim()
+    
+    // Используем полный пул фильмов для поиска
+    const searchPool = [...localMovieDatabase, ...this.moviePool]
+    
+    let results = searchPool.filter(
       (movie) =>
         movie.title.toLowerCase().includes(searchLower) ||
         (movie.originalTitle && movie.originalTitle.toLowerCase().includes(searchLower)) ||
-        movie.description.toLowerCase().includes(searchLower),
+        movie.description.toLowerCase().includes(searchLower) ||
+        movie.genre.some(g => g.toLowerCase().includes(searchLower)) ||
+        (movie.director && movie.director.toLowerCase().includes(searchLower)) ||
+        (movie.actors && movie.actors.toLowerCase().includes(searchLower)),
     )
 
     // Фильтрация по типу медиа
     if (mediaType !== "all") {
       results = results.filter((movie) => movie.mediaType === mediaType)
     }
+    
+    // Удаляем дубликаты по tmdbId
+    const uniqueResults = results.filter((movie, index, self) => 
+      self.findIndex(m => m.tmdbId === movie.tmdbId) === index
+    )
+    
+    // Сортируем по популярности
+    uniqueResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
 
     return {
-      movies: results.slice(0, 50), // Ограничиваем результаты
-      totalResults: results.length,
+      movies: uniqueResults.slice(0, 50), // Ограничиваем результаты
+      totalResults: uniqueResults.length,
       source: "local",
     }
   }
@@ -619,4 +639,3 @@ class TMDBService {
 }
 
 export const tmdbService = new TMDBService()
-export type { Movie }

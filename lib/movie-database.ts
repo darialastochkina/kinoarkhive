@@ -46,6 +46,11 @@ export function getBackdropUrl(backdropPath?: string): string {
   return `https://image.tmdb.org/t/p/original${backdropPath}`
 }
 
+// Функция для преобразования ID жанра в название
+export function genreIdToName(genreId: number): string {
+  return genreMap[genreId] || "Неизвестный жанр"
+}
+
 export function getYearFromDate(dateString?: string): number | undefined {
   if (!dateString) return undefined
   return new Date(dateString).getFullYear()

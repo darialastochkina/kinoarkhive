@@ -17,13 +17,16 @@ import {
   Tv,
   Play,
   ArrowUp,
+  Calendar,
+  CheckSquare,
 } from "lucide-react"
 import { MovieCard } from "@/components/movie-card"
 import { MovieProjector } from "@/components/movie-projector"
 import { FilterDialog } from "@/components/filter-dialog"
 import { AuthDialog } from "@/components/auth-dialog"
 import { tmdbService, type Movie } from "@/lib/tmdb-service"
-import { authService } from "@/lib/auth-service"
+export type { Movie }
+import { getAuthService } from "@/lib/auth-service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function Home() {
@@ -44,16 +47,11 @@ export default function Home() {
   const [selectedSpecials, setSelectedSpecials] = useState<string[]>([])
   const [allMovies, setAllMovies] = useState<Movie[]>([])
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all")
-  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser())
+  const [currentUser, setCurrentUser] = useState<import("@/lib/auth-service").User | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
-
-  // ИСПРАВЛЕНО: Глобальное состояние избранных с правильной инициализацией
-  const [favoriteMovieIds, setFavoriteMovieIds] = useState<string[]>(() => {
-    if (typeof window !== "undefined" && authService.getCurrentUser()) {
-      return authService.loadFavorites()
-    }
-    return []
-  })
+  const [favoriteMovieIds, setFavoriteMovieIds] = useState<string[]>([])
+  const [watchlistMovieIds, setWatchlistMovieIds] = useState<string[]>([])
+  const [watchedMovies, setWatchedMovies] = useState<import("@/lib/auth-service").WatchedMovie[]>([])
 
   // Отслеживание скролла для кнопки "наверх"
   useEffect(() => {
@@ -64,16 +62,16 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // ИСПРАВЛЕНО: Правильная загрузка избранных при старте
+  // Инициализация пользователя и списков только на клиенте
   useEffect(() => {
-    if (currentUser) {
-      const favoriteIds = authService.loadFavorites()
-      console.log("Загружаем избранные для пользователя:", favoriteIds)
-      setFavoriteMovieIds(favoriteIds)
-    } else {
-      setFavoriteMovieIds([])
+    const authService = getAuthService()
+    if (authService) {
+      setCurrentUser(authService.getCurrentUser())
+      setFavoriteMovieIds(authService.loadFavorites())
+      setWatchlistMovieIds(authService.loadWatchlist())
+      setWatchedMovies(authService.loadWatched())
     }
-  }, [currentUser])
+  }, [])
 
   // ИСПРАВЛЕНО: Обновляем статус избранных во всех фильмах
   const updateMoviesWithFavorites = useCallback(() => {
@@ -170,7 +168,9 @@ export default function Home() {
         setAllMovies(resultsWithFavorites)
         setCurrentPage(1)
       } else {
-        const newMovies = [...allMovies, ...resultsWithFavorites]
+        const newMovies = [...allMovies, ...resultsWithFavorites].filter(
+          (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
+        )
         setMovies(newMovies)
         setAllMovies(newMovies)
         setCurrentPage(page)
@@ -199,17 +199,15 @@ export default function Home() {
       if (searchTerm.trim()) {
         await handleSearch(currentPage + 1)
       } else {
-        // ИСПРАВЛЕНО: Используем новый метод для получения уникального контента
         const { movies: moreMovies } = await tmdbService.getMoreMovies(allMovies, mediaType, currentPage + 1)
-
         if (moreMovies.length > 0) {
           const moreMoviesWithFavorites = applyFavoritesToMovies(moreMovies)
-          const newMovies = [...allMovies, ...moreMoviesWithFavorites]
-          setMovies(newMovies)
-          setAllMovies(newMovies)
+          const uniqueMovies = [...allMovies, ...moreMoviesWithFavorites].filter(
+            (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
+          )
+          setMovies(uniqueMovies)
+          setAllMovies(uniqueMovies)
           setCurrentPage((prev) => prev + 1)
-
-          // Показываем кнопку еще 2-3 раза
           if (currentPage >= 3) {
             setHasMoreMovies(false)
           }
@@ -243,22 +241,22 @@ export default function Home() {
   // ИСПРАВЛЕНО: Переключение статуса избранного с немедленным сохранением
   const toggleFavorite = useCallback(
     (id: string) => {
+      const authService = getAuthService()
       if (!currentUser) {
         setShowAuthDialog(true)
         return
       }
-
-      console.log("Переключаем избранное для фильма:", id)
-
-      const newFavoriteIds = favoriteMovieIds.includes(id)
-        ? favoriteMovieIds.filter((favId) => favId !== id)
-        : [...favoriteMovieIds, id]
-
-      // ИСПРАВЛЕНО: Немедленно обновляем состояние и сохраняем
+      let actualFavorites: string[] = []
+      if (authService) {
+        actualFavorites = authService.loadFavorites()
+      } else {
+        actualFavorites = favoriteMovieIds
+      }
+      const newFavoriteIds = actualFavorites.includes(id)
+        ? actualFavorites.filter((favId) => favId !== id)
+        : [...actualFavorites, id]
       setFavoriteMovieIds(newFavoriteIds)
-      authService.saveFavorites(newFavoriteIds)
-
-      console.log("Обновленные избранные:", newFavoriteIds)
+      if (authService) authService.saveFavorites(newFavoriteIds)
     },
     [currentUser, favoriteMovieIds],
   )
@@ -358,14 +356,24 @@ export default function Home() {
 
   // Обработка успешной авторизации
   const handleAuthSuccess = () => {
-    setCurrentUser(authService.getCurrentUser())
+    const authService = getAuthService()
+    if (authService) {
+      setCurrentUser(authService.getCurrentUser())
+      // Загружаем все списки для нового пользователя
+      setFavoriteMovieIds(authService.loadFavorites())
+      setWatchlistMovieIds(authService.loadWatchlist())
+      setWatchedMovies(authService.loadWatched())
+    }
   }
 
   // Выход из аккаунта
   const handleLogout = () => {
-    authService.logout()
+    const authService = getAuthService()
+    if (authService) authService.logout()
     setCurrentUser(null)
     setFavoriteMovieIds([])
+    setWatchlistMovieIds([])
+    setWatchedMovies([])
   }
 
   // Прокрутка наверх
@@ -376,6 +384,13 @@ export default function Home() {
   // ИСПРАВЛЕНО: Фильтрация по табам
   const getFilteredMovies = () => {
     switch (activeTab) {
+      case "watchlist":
+        // Фильмы в списке "Посмотрю позже"
+        return allMovies.filter((movie) => watchlistMovieIds.includes(movie.id))
+      case "watched":
+        // Фильмы в списке "Просмотрено"
+        const watchedIds = watchedMovies.map(w => w.movieId)
+        return allMovies.filter((movie) => watchedIds.includes(movie.id))
       case "favorites":
         // Ищем избранные среди ВСЕХ загруженных фильмов
         return allMovies.filter((movie) => favoriteMovieIds.includes(movie.id))
@@ -498,6 +513,14 @@ export default function Home() {
                     <Play className="h-4 w-4 mr-2" />
                     Все
                   </TabsTrigger>
+                  <TabsTrigger value="watchlist" className="netflix-tab">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Посмотрю позже
+                  </TabsTrigger>
+                  <TabsTrigger value="watched" className="netflix-tab">
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Просмотрено
+                  </TabsTrigger>
                   <TabsTrigger value="favorites" className="netflix-tab">
                     <Heart className="h-4 w-4 mr-2" />
                     Избранные {currentUser && favoritesCount > 0 && `(${favoritesCount})`}
@@ -507,7 +530,10 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   {/* Счетчик результатов */}
                   <span className="text-sm text-gray-400">
-                    {activeTab === "favorites" ? `${favoritesCount} избранных` : `${filteredMovies.length} фильмов`}
+                    {activeTab === "favorites" && `${favoritesCount} избранных`}
+                    {activeTab === "watchlist" && `${watchlistMovieIds.length} в списке`}
+                    {activeTab === "watched" && `${watchedMovies.length} просмотрено`}
+                    {activeTab === "all" && `${filteredMovies.length} фильмов`}
                   </span>
 
                   <Button
@@ -522,6 +548,8 @@ export default function Home() {
               </div>
 
               <TabsContent value="all" className="mt-0" />
+              <TabsContent value="watchlist" className="mt-0" />
+              <TabsContent value="watched" className="mt-0" />
               <TabsContent value="favorites" className="mt-0" />
             </Tabs>
           </div>
@@ -548,12 +576,12 @@ export default function Home() {
           </div>
         )}
 
-        {!currentUser && activeTab === "favorites" && (
+        {!currentUser && (activeTab === "favorites" || activeTab === "watchlist" || activeTab === "watched") && (
           <div className="max-w-2xl mx-auto mb-6">
-            <Alert className="border-[#8b1c24]/50 bg-[#8b1c24]/10">
-              <User className="h-4 w-4 text-[#8b1c24]" />
+            <Alert className="border-[#5e1414]/50 bg-[#5e1414]/10">
+              <User className="h-4 w-4 text-[#5e1414]" />
               <AlertDescription className="text-gray-300">
-                💡 Войдите в аккаунт, чтобы сохранять избранные фильмы и сериалы!
+                💡 Войдите в аккаунт, чтобы сохранять списки фильмов и сериалов!
               </AlertDescription>
             </Alert>
           </div>
@@ -568,26 +596,30 @@ export default function Home() {
         ) : filteredMovies.length === 0 ? (
           <div className="text-center py-20">
             <div className="netflix-empty-state p-8">
-              {activeTab === "favorites" ? (
-                <Heart className="h-16 w-16 mx-auto mb-6 text-[#8b1c24]" />
-              ) : (
-                <Film className="h-16 w-16 mx-auto mb-6 text-[#8b1c24]" />
-              )}
+              {activeTab === "favorites" && <Heart className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              {activeTab === "watchlist" && <Calendar className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              {activeTab === "watched" && <CheckSquare className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              {activeTab === "all" && <Film className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              
               <h2 className="text-2xl font-bold text-white mb-2">
-                {activeTab === "favorites"
-                  ? "Нет избранного контента"
-                  : searchTerm
-                    ? "Контент не найден"
-                    : "Добро пожаловать!"}
+                {activeTab === "favorites" && "Нет избранного контента"}
+                {activeTab === "watchlist" && "Список пуст"}
+                {activeTab === "watched" && "Нет просмотренных фильмов"}
+                {activeTab === "all" && (searchTerm ? "Контент не найден" : "Добро пожаловать!")}
               </h2>
               <p className="text-gray-400">
-                {activeTab === "favorites"
-                  ? currentUser
-                    ? "Добавьте фильмы и сериалы в избранное, нажав на сердечко"
-                    : "Войдите в аккаунт, чтобы сохранять избранное"
-                  : searchTerm
-                    ? "Попробуйте изменить поисковый запрос"
-                    : "Найдите свои любимые фильмы и сериалы"}
+                {activeTab === "favorites" && (currentUser
+                  ? "Добавьте фильмы и сериалы в избранное, нажав на сердечко"
+                  : "Войдите в аккаунт, чтобы сохранять избранное")}
+                {activeTab === "watchlist" && (currentUser
+                  ? "Добавьте фильмы в список \"Посмотрю позже\""
+                  : "Войдите в аккаунт, чтобы создавать списки")}
+                {activeTab === "watched" && (currentUser
+                  ? "Отметьте просмотренные фильмы и поставьте им оценку"
+                  : "Войдите в аккаунт, чтобы отмечать просмотренные фильмы")}
+                {activeTab === "all" && (searchTerm
+                  ? "Попробуйте изменить поисковый запрос"
+                  : "Найдите свои любимые фильмы и сериалы")}
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Star, StarOff, Calendar, Award } from "lucide-react"
-import type { Movie } from "@/app/page"
+import type { Movie } from "@/lib/tmdb-service"
 import { genreIdToName } from "@/lib/movie-database"
 
 interface MovieDetailsProps {

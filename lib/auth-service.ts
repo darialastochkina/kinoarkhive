@@ -9,12 +9,21 @@ export interface User {
 export interface UserData {
   user: User
   favorites: string[]
+  watchlist?: string[] // Список "Посмотрю позже"
+  watched?: WatchedMovie[] // Список "Просмотрено"
+}
+
+export interface WatchedMovie {
+  movieId: string
+  watchedAt: string
+  rating?: number // 1-5 звезд
+  comment?: string
 }
 
 class AuthService {
   private currentUser: User | null = null
   private storageKey = "movieapp_user"
-  private favoritesKey = "movieapp_favorites"
+  private favoritesKey = "movieapp_favorites_global"
 
   constructor() {
     this.loadUser()
@@ -23,6 +32,7 @@ class AuthService {
 
   // Инициализация тестовых пользователей
   private initializeTestUsers() {
+    if (typeof window === "undefined") return
     const testUsers = [
       {
         id: "test-user-daria",
@@ -48,15 +58,20 @@ class AuthService {
     testUsers.forEach((testUser) => {
       existingUsers.push(testUser)
       // Устанавливаем пароль для тестовых пользователей
-      localStorage.setItem(`password_${testUser.id}`, "123456")
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`password_${testUser.id}`, "123456")
+      }
     })
 
-    localStorage.setItem("movieapp_all_users", JSON.stringify(existingUsers))
+    if (typeof window !== "undefined") {
+      localStorage.setItem("movieapp_all_users", JSON.stringify(existingUsers))
+    }
     console.log("Тестовые пользователи инициализированы:", testUsers)
   }
 
   // Загрузка пользователя из localStorage
   private loadUser() {
+    if (typeof window === "undefined") return
     try {
       const userData = localStorage.getItem(this.storageKey)
       if (userData) {
@@ -69,6 +84,7 @@ class AuthService {
 
   // Сохранение пользователя в localStorage
   private saveUser(user: User) {
+    if (typeof window === "undefined") return
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(user))
       this.currentUser = user
@@ -133,6 +149,11 @@ class AuthService {
 
       this.saveUser(user)
       console.log("Успешный вход:", user)
+      
+      // Загружаем избранные для вошедшего пользователя
+      const userFavorites = this.loadFavorites()
+      console.log(`Загружено ${userFavorites.length} избранных для пользователя ${user.name}`)
+      
       return { success: true }
     } catch (error) {
       console.error("Ошибка при входе:", error)
@@ -158,6 +179,7 @@ class AuthService {
 
   // Сохранение пользователя в общий список
   private saveUserToStorage(user: User, password: string) {
+    if (typeof window === "undefined") return
     try {
       const users = this.getAllUsers()
       users.push(user)
@@ -170,6 +192,7 @@ class AuthService {
 
   // Получение всех пользователей
   private getAllUsers(): User[] {
+    if (typeof window === "undefined") return []
     try {
       const users = localStorage.getItem("movieapp_all_users")
       return users ? JSON.parse(users) : []
@@ -179,34 +202,123 @@ class AuthService {
     }
   }
 
-  // Сохранение избранных фильмов для текущего пользователя
+  // Сохранение избранных фильмов (привязаны к пользователю)
   saveFavorites(favorites: string[]) {
-    if (!this.currentUser) return
-
+    if (typeof window === "undefined") return
     try {
-      const key = `${this.favoritesKey}_${this.currentUser.id}`
-      localStorage.setItem(key, JSON.stringify(favorites))
+      if (this.currentUser) {
+        // Сохраняем избранные для конкретного пользователя
+        const userFavoritesKey = `movieapp_favorites_${this.currentUser.id}`
+        localStorage.setItem(userFavoritesKey, JSON.stringify(favorites))
+      } else {
+        // Для неавторизованных пользователей сохраняем глобально
+        localStorage.setItem(this.favoritesKey, JSON.stringify(favorites))
+      }
     } catch (error) {
       console.error("Ошибка сохранения избранных:", error)
     }
   }
 
-  // Загрузка избранных фильмов для текущего пользователя
+  // Загрузка избранных фильмов (привязаны к пользователю)
   loadFavorites(): string[] {
-    if (!this.currentUser) return []
-
+    if (typeof window === "undefined") return []
     try {
-      const key = `${this.favoritesKey}_${this.currentUser.id}`
-      const favorites = localStorage.getItem(key)
-      return favorites ? JSON.parse(favorites) : []
+      if (this.currentUser) {
+        // Загружаем избранные для конкретного пользователя
+        const userFavoritesKey = `movieapp_favorites_${this.currentUser.id}`
+        const userFavorites = localStorage.getItem(userFavoritesKey)
+        if (userFavorites) {
+          return JSON.parse(userFavorites)
+        }
+        
+        // Если у пользователя еще нет избранных, пробуем мигрировать глобальные
+        const globalFavorites = localStorage.getItem(this.favoritesKey)
+        if (globalFavorites) {
+          const parsed = JSON.parse(globalFavorites)
+          this.saveFavorites(parsed) // Сохраняем для пользователя
+          return parsed
+        }
+        return []
+      } else {
+        // Для неавторизованных пользователей загружаем глобальные
+        const favorites = localStorage.getItem(this.favoritesKey)
+        return favorites ? JSON.parse(favorites) : []
+      }
     } catch (error) {
       console.error("Ошибка загрузки избранных:", error)
       return []
     }
   }
 
+  // Сохранение списка "Посмотрю позже"
+  saveWatchlist(watchlist: string[]) {
+    if (typeof window === "undefined") return
+    try {
+      if (this.currentUser) {
+        const userWatchlistKey = `movieapp_watchlist_${this.currentUser.id}`
+        localStorage.setItem(userWatchlistKey, JSON.stringify(watchlist))
+      } else {
+        localStorage.setItem("movieapp_watchlist_global", JSON.stringify(watchlist))
+      }
+    } catch (error) {
+      console.error("Ошибка сохранения watchlist:", error)
+    }
+  }
+
+  // Загрузка списка "Посмотрю позже"
+  loadWatchlist(): string[] {
+    if (typeof window === "undefined") return []
+    try {
+      if (this.currentUser) {
+        const userWatchlistKey = `movieapp_watchlist_${this.currentUser.id}`
+        const userWatchlist = localStorage.getItem(userWatchlistKey)
+        return userWatchlist ? JSON.parse(userWatchlist) : []
+      } else {
+        const watchlist = localStorage.getItem("movieapp_watchlist_global")
+        return watchlist ? JSON.parse(watchlist) : []
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки watchlist:", error)
+      return []
+    }
+  }
+
+  // Сохранение списка "Просмотрено"
+  saveWatched(watched: WatchedMovie[]) {
+    if (typeof window === "undefined") return
+    try {
+      if (this.currentUser) {
+        const userWatchedKey = `movieapp_watched_${this.currentUser.id}`
+        localStorage.setItem(userWatchedKey, JSON.stringify(watched))
+      } else {
+        localStorage.setItem("movieapp_watched_global", JSON.stringify(watched))
+      }
+    } catch (error) {
+      console.error("Ошибка сохранения watched:", error)
+    }
+  }
+
+  // Загрузка списка "Просмотрено"
+  loadWatched(): WatchedMovie[] {
+    if (typeof window === "undefined") return []
+    try {
+      if (this.currentUser) {
+        const userWatchedKey = `movieapp_watched_${this.currentUser.id}`
+        const userWatched = localStorage.getItem(userWatchedKey)
+        return userWatched ? JSON.parse(userWatched) : []
+      } else {
+        const watched = localStorage.getItem("movieapp_watched_global")
+        return watched ? JSON.parse(watched) : []
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки watched:", error)
+      return []
+    }
+  }
+
   // Принудительный сброс и пересоздание тестовых аккаунтов
   resetTestAccounts() {
+    if (typeof window === "undefined") return
     localStorage.removeItem("movieapp_all_users")
     localStorage.removeItem("password_test-user-daria")
     localStorage.removeItem("password_test-user-demo")
@@ -214,4 +326,10 @@ class AuthService {
   }
 }
 
-export const authService = new AuthService()
+let authServiceInstance: AuthService | null = null
+export function getAuthService() {
+  if (!authServiceInstance && typeof window !== "undefined") {
+    authServiceInstance = new AuthService()
+  }
+  return authServiceInstance
+}

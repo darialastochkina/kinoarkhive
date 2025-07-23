@@ -376,7 +376,7 @@ class OMDBService {
     this.isApiWorking = true // Предполагаем что ключ рабочий
 
     // Также проверяем localStorage на случай если пользователь хочет использовать свой ключ
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       const userKey = localStorage.getItem("omdb_api_key")
       if (userKey && userKey !== this.apiKey) {
         this.apiKey = userKey
@@ -388,7 +388,7 @@ class OMDBService {
   // Установка API ключа
   setApiKey(key: string) {
     this.apiKey = key
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       localStorage.setItem("omdb_api_key", key)
     }
     this.isApiWorking = false // Сбрасываем статус, чтобы проверить новый ключ
@@ -632,6 +632,3 @@ class OMDBService {
 
 // Создаем и экспортируем экземпляр сервиса
 export const omdbService = new OMDBService()
-
-// Экспортируем типы
-export type { Movie }

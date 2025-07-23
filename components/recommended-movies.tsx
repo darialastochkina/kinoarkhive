@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Film } from "lucide-react"
 import { movieService } from "@/lib/movie-service"
-import type { Movie } from "@/app/page"
+import type { Movie } from "@/lib/tmdb-service"
 
 interface RecommendedMoviesProps {
   onSelectMovie: (movie: Movie) => void

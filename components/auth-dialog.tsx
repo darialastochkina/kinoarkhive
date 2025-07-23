@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { User, Mail, Lock, UserPlus, LogIn, Info } from "lucide-react"
-import { authService } from "@/lib/auth-service"
+import { getAuthService } from "@/lib/auth-service"
 
 interface AuthDialogProps {
   open: boolean
@@ -27,7 +27,8 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
     setIsLoading(true)
     setError(null)
 
-    const result = await authService.login(loginData.email, loginData.password)
+    const authService = getAuthService()
+    const result = authService ? await authService.login(loginData.email, loginData.password) : { success: false, error: "Auth service not available" }
 
     if (result.success) {
       onAuthSuccess()
@@ -57,7 +58,8 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
       return
     }
 
-    const result = await authService.register(registerData.email, registerData.password, registerData.name)
+    const authService = getAuthService()
+    const result = authService ? await authService.register(registerData.email, registerData.password, registerData.name) : { success: false, error: "Auth service not available" }
 
     if (result.success) {
       onAuthSuccess()
