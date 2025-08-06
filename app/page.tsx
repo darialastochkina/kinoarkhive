@@ -25,6 +25,7 @@ import { MovieProjector } from "@/components/movie-projector"
 import { FilterDialog } from "@/components/filter-dialog"
 import { AuthDialog } from "@/components/auth-dialog"
 import { tmdbService, type Movie } from "@/lib/tmdb-service"
+import { MovieService } from "@/lib/movie-service"
 export type { Movie }
 import { getAuthService } from "@/lib/auth-service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -129,11 +130,21 @@ export default function Home() {
       setAllMovies(contentWithUserData)
       setDataSource(source)
       setCurrentPage(1)
-      setTotalResults(contentWithFavorites.length)
-      setHasMoreMovies(source === "api" && contentWithFavorites.length >= 20)
+      setTotalResults(contentWithUserData.length)
+      // Устанавливаем hasMoreMovies для локальной базы тоже
+      if (source === "local") {
+        // Для локальной базы показываем кнопку "Еще" если есть больше фильмов чем показано
+        const movieService = new MovieService()
+        await movieService.initialize()
+        const allAvailableMovies = await movieService.getPopularMovies(1, 1000)
+        setHasMoreMovies(allAvailableMovies.length > contentWithUserData.length)
+      } else {
+        setHasMoreMovies(contentWithUserData.length >= 20)
+      }
     } catch (error) {
       console.error("Ошибка при загрузке контента:", error)
-      setError("Не удалось загрузить контент. Используется локальная база данных.")
+      // Убрано сообщение об ошибке для чистоты интерфейса
+      // setError("Не удалось загрузить контент. Используется локальная база данных.")
       setDataSource("local")
     } finally {
       setIsLoading(false)
@@ -174,7 +185,7 @@ export default function Home() {
         setAllMovies(resultsWithUserData)
         setCurrentPage(1)
       } else {
-        const newMovies = [...allMovies, ...resultsWithFavorites].filter(
+        const newMovies = [...allMovies, ...resultsWithUserData].filter(
           (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
         )
         setMovies(newMovies)
@@ -189,7 +200,8 @@ export default function Home() {
       )
     } catch (error) {
       console.error("Ошибка при поиске:", error)
-      setError("Ошибка поиска. Используется локальная база данных.")
+      // Убрано сообщение об ошибке для чистоты интерфейса
+      // setError("Ошибка поиска. Используется локальная база данных.")
       setDataSource("local")
     } finally {
       setIsSearching(false)
@@ -205,7 +217,7 @@ export default function Home() {
       if (searchTerm.trim()) {
         await handleSearch(currentPage + 1)
       } else {
-        const { movies: moreMovies } = await tmdbService.getMoreMovies(allMovies, mediaType, currentPage + 1)
+        const { movies: moreMovies, source } = await tmdbService.getMoreMovies(allMovies, mediaType, currentPage + 1)
         if (moreMovies.length > 0) {
           const moreMoviesWithUserData = applyUserDataToMovies(moreMovies)
           const uniqueMovies = [...allMovies, ...moreMoviesWithUserData].filter(
@@ -214,8 +226,15 @@ export default function Home() {
           setMovies(uniqueMovies)
           setAllMovies(uniqueMovies)
           setCurrentPage((prev) => prev + 1)
-          if (currentPage >= 3) {
-            setHasMoreMovies(false)
+          
+          // Проверяем есть ли еще фильмы для загрузки
+          if (source === "local") {
+            const movieService = new MovieService()
+            await movieService.initialize()
+            const totalAvailable = await movieService.getPopularMovies(1, 1000)
+            setHasMoreMovies(uniqueMovies.length < totalAvailable.length)
+          } else {
+            setHasMoreMovies(moreMovies.length >= 20)
           }
         } else {
           setHasMoreMovies(false)
@@ -223,7 +242,8 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Ошибка при загрузке дополнительного контента:", error)
-      setError("Ошибка загрузки дополнительных результатов")
+      // Убрано сообщение об ошибке для чистоты интерфейса
+      // setError("Ошибка загрузки дополнительных результатов")
       setHasMoreMovies(false)
     } finally {
       setIsLoadingMore(false)
@@ -432,20 +452,59 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  // ИСПРАВЛЕНО: Фильтрация по табам
+  // ИСПРАВЛЕНО: Фильтрация по табам с учетом фильтров жанров
   const getFilteredMovies = () => {
+    let baseMovies: Movie[] = []
+    
     switch (activeTab) {
       case "watchlist":
         // Фильмы в списке "Посмотрю позже"
-        return allMovies.filter((movie) => watchlistMovieIds.includes(movie.id))
+        baseMovies = allMovies.filter((movie) => watchlistMovieIds.includes(movie.id))
+        break
       case "watched":
         // Фильмы в списке "Просмотрено"
         const watchedIds = watchedMovies.map(w => w.movieId)
-        return allMovies.filter((movie) => watchedIds.includes(movie.id))
-      // Категория "Избранное" убрана
+        baseMovies = allMovies.filter((movie) => watchedIds.includes(movie.id))
+        break
       default:
+        // Для вкладки "Все" используем уже отфильтрованные movies
         return movies
     }
+    
+    // Применяем фильтры жанров и специальные фильтры к watchlist и watched
+    if (selectedGenres.length > 0 || selectedSpecials.length > 0) {
+      // Фильтрация по жанрам
+      if (selectedGenres.length > 0) {
+        baseMovies = baseMovies.filter((movie) => {
+          return movie.genre.some((g) => {
+            const genreId = Number.parseInt(g)
+            if (!isNaN(genreId)) {
+              return selectedGenres.includes(genreId)
+            }
+            return selectedGenres.some((id) => getGenreName(id) === g)
+          })
+        })
+      }
+      
+      // Фильтрация по специальным подборкам
+      if (selectedSpecials.length > 0) {
+        selectedSpecials.forEach((filter) => {
+          switch (filter) {
+            case "new":
+              baseMovies = baseMovies.filter((movie) => movie.year >= 2023)
+              break
+            case "popular":
+              baseMovies = [...baseMovies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+              break
+            case "top_rated":
+              baseMovies = baseMovies.filter((movie) => (movie.rating || 0) >= 8.0)
+              break
+          }
+        })
+      }
+    }
+    
+    return baseMovies
   }
 
   const filteredMovies = getFilteredMovies()
@@ -599,26 +658,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Информационные сообщения */}
-        {error && (
-          <div className="max-w-2xl mx-auto mb-6">
-            <Alert className="border-red-500/50 bg-red-900/20">
-              <AlertCircle className="h-4 w-4 text-red-400" />
-              <AlertDescription className="text-red-300">{error}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {dataSource === "local" && (
-          <div className="max-w-2xl mx-auto mb-6">
-            <Alert className="border-blue-500/50 bg-blue-900/20">
-              <Database className="h-4 w-4 text-blue-400" />
-              <AlertDescription className="text-blue-300">
-                📚 Используется локальная база с популярными фильмами и сериалами.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
+        {/* Информационные сообщения - убраны технические детали для чистоты интерфейса */}
 
         {!currentUser && (activeTab === "watchlist" || activeTab === "watched") && (
           <div className="max-w-2xl mx-auto mb-6">

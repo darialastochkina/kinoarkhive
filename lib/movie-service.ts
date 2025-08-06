@@ -18,6 +18,9 @@ export class MovieService {
       
       // Перемешиваем фильмы для разнообразия
       this.shuffleMovies()
+      
+      // Сбрасываем использованные фильмы при инициализации
+      this.resetUsedMovies()
 
       this.isInitialized = true
       console.log(`Загружено ${this.movies.length} фильмов`)

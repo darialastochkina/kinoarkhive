@@ -158,7 +158,7 @@ export function MovieCard({
                 <span className="text-xs text-gray-300">Ваша оценка:</span>
                 <div className="flex items-center gap-1 px-2 py-1 bg-[#5e1414]/20 rounded-full">
                   <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                  <span className="text-xs text-yellow-400 font-medium">{movie.userRating}</span>
+                  <span className="text-xs text-yellow-400 font-medium">{movie.userRating}/10</span>
                 </div>
               </div>
             )}
@@ -254,7 +254,7 @@ export function MovieCard({
                         <span className="text-sm text-gray-300">Ваша оценка:</span>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="text-yellow-400 font-medium">{movie.userRating}</span>
+                          <span className="text-yellow-400 font-medium">{movie.userRating}/10</span>
                         </div>
                       </div>
                     </div>
@@ -358,15 +358,15 @@ export function MovieCard({
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-medium text-white mb-2">{movie.title}</h3>
-              <div className="flex justify-center space-x-2">
-                {[1, 2, 3, 4, 5].map((rating) => (
+              <div className="flex justify-center space-x-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((rating) => (
                   <button
                     key={rating}
                     onClick={() => setSelectedRating(rating)}
                     className="p-1 transition-colors"
                   >
                     <Star
-                      className={`h-8 w-8 ${
+                      className={`h-6 w-6 ${
                         rating <= selectedRating
                           ? "text-yellow-400 fill-current"
                           : "text-gray-400 hover:text-yellow-300"
@@ -377,7 +377,7 @@ export function MovieCard({
               </div>
               {selectedRating > 0 && (
                 <p className="text-center text-sm text-gray-400 mt-2">
-                  Ваша оценка: {selectedRating} звезд{selectedRating > 1 && selectedRating < 5 ? 'ы' : selectedRating === 1 ? 'а' : ''}
+                  Ваша оценка: {selectedRating}/10
                 </p>
               )}
             </div>

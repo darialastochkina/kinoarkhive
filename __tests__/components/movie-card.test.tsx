@@ -123,7 +123,7 @@ describe('MovieCard', () => {
   })
 
   it('should call onRemoveFromWatched when watched movie button is clicked', () => {
-    const watchedMovie = { ...mockMovie, isWatched: true, userRating: 4 }
+    const watchedMovie = { ...mockMovie, isWatched: true, userRating: 8 }
     
     render(
       <MovieCard
@@ -139,7 +139,7 @@ describe('MovieCard', () => {
   })
 
   it('should display user rating when movie is watched', () => {
-    const watchedMovie = { ...mockMovie, isWatched: true, userRating: 4 }
+    const watchedMovie = { ...mockMovie, isWatched: true, userRating: 8 }
     
     render(
       <MovieCard
@@ -148,7 +148,7 @@ describe('MovieCard', () => {
       />
     )
 
-    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByText('8/10')).toBeInTheDocument()
     expect(screen.getByText('Ваша оценка:')).toBeInTheDocument()
   })
 
@@ -186,23 +186,19 @@ describe('MovieCard', () => {
       expect(screen.getByText('Оцените фильм')).toBeInTheDocument()
     })
 
-    // Select 5-star rating
-    const fiveStarButton = screen.getAllByRole('button').find(
-      button => button.querySelector('svg') && button.textContent === ''
-    )
-    
+    // Select 10-star rating
     const starButtons = screen.getAllByRole('button').filter(
-      button => button.querySelector('svg.h-8.w-8')
+      button => button.querySelector('svg.h-6.w-6')
     )
     
-    if (starButtons.length >= 5) {
-      fireEvent.click(starButtons[4]) // 5th star (0-indexed)
+    if (starButtons.length >= 10) {
+      fireEvent.click(starButtons[9]) // 10th star (0-indexed)
       
       // Click save button
       const saveButton = screen.getByText('Сохранить')
       fireEvent.click(saveButton)
 
-      expect(mockHandlers.onMarkAsWatched).toHaveBeenCalledWith(mockMovie, 5)
+      expect(mockHandlers.onMarkAsWatched).toHaveBeenCalledWith(mockMovie, 10)
     }
   })
 
@@ -230,6 +226,7 @@ describe('MovieCard', () => {
       posterUrl: '',
       backdropUrl: '',
       mediaType: 'movie',
+      isFavorite: false,
     }
 
     render(

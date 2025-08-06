@@ -52,7 +52,7 @@ describe('Basic Integration Tests', () => {
     expect(watchedMovie).toHaveProperty('watchedAt')
     expect(typeof watchedMovie.rating).toBe('number')
     expect(watchedMovie.rating).toBeGreaterThanOrEqual(1)
-    expect(watchedMovie.rating).toBeLessThanOrEqual(5)
+    expect(watchedMovie.rating).toBeLessThanOrEqual(10)
   })
 
   it('should handle localStorage operations', () => {
@@ -102,11 +102,11 @@ describe('Basic Integration Tests', () => {
   })
 
   it('should validate rating system', () => {
-    const ratings = [1, 2, 3, 4, 5]
+    const ratings = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     
     ratings.forEach(rating => {
       expect(rating).toBeGreaterThanOrEqual(1)
-      expect(rating).toBeLessThanOrEqual(5)
+      expect(rating).toBeLessThanOrEqual(10)
       expect(Number.isInteger(rating)).toBe(true)
     })
   })

@@ -316,6 +316,9 @@ class TMDBService {
       })
     })
 
+    // Перемешиваем пул фильмов для разнообразия при каждой загрузке
+    this.moviePool = this.moviePool.sort(() => Math.random() - 0.5)
+    
     console.log(`Инициализирован пул из ${this.moviePool.length} фильмов`)
   }
 
