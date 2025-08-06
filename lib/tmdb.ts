@@ -193,7 +193,7 @@ export async function searchMovies(query: string) {
     const data = await response.json()
     return data.results || []
   } catch (error) {
-    console.error("Ошибка при поиске фильмов:", error)
+    // Ошибка при поиске фильмов
 
     // Если API не работает, ищем в локальной базе данных
     const results = movieDatabase.filter((movie) => {
@@ -232,7 +232,7 @@ export async function getMovieDetails(movieId: number) {
 
     return await response.json()
   } catch (error) {
-    console.error("Ошибка при получении информации о фильме:", error)
+    // Ошибка при получении информации о фильме
 
     // Ищем фильм в локальной базе данных
     const movie = movieDatabase.find((m) => m.id === movieId)
@@ -273,7 +273,7 @@ export async function getPopularMovies(page = 1) {
     const data = await response.json()
     return data.results || []
   } catch (error) {
-    console.error("Ошибка при получении популярных фильмов:", error)
+    // Ошибка при получении популярных фильмов
 
     // Если API не работает, возвращаем фильмы из локальной базы данных
     return shuffleArray(movieDatabase).slice(0, 10)

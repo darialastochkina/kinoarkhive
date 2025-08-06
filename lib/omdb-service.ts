@@ -420,7 +420,7 @@ class OMDBService {
 
       return this.isApiWorking
     } catch (error) {
-      console.error("Ошибка проверки API:", error)
+      // Ошибка проверки API
       this.isApiWorking = false
       return false
     }
@@ -468,7 +468,7 @@ class OMDBService {
 
       return data
     } catch (error) {
-      console.error("Ошибка запроса к OMDB:", error)
+      // Ошибка запроса к OMDB
       throw error
     }
   }
@@ -498,7 +498,7 @@ class OMDBService {
 
         return { movies, totalResults, source: "api" }
       } catch (error) {
-        console.error("Ошибка поиска через API, переключаемся на локальную базу:", error)
+        // Ошибка поиска через API, переключаемся на локальную базу
         this.isApiWorking = false
       }
     }
@@ -539,7 +539,7 @@ class OMDBService {
 
         return this.convertOMDBToMovie(data, true)
       } catch (error) {
-        console.error("Ошибка получения деталей через API:", error)
+        // Ошибка получения деталей через API
       }
     }
 
@@ -569,7 +569,7 @@ class OMDBService {
           return { movies: uniqueMovies.slice(0, 15), source: "api" }
         }
       } catch (error) {
-        console.error("Ошибка получения популярных фильмов через API:", error)
+        // Ошибка получения популярных фильмов через API
       }
     }
 

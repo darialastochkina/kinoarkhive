@@ -70,7 +70,7 @@ export function FilterDialog({
 
   // Применяем фильтры
   const handleApply = () => {
-    console.log("Применяем фильтры в диалоге:", { tempGenres, tempSpecials })
+    // console.log("Применяем фильтры в диалоге:", { tempGenres, tempSpecials })
     onApplyFilters([...tempGenres], [...tempSpecials])
     onOpenChange(false)
   }

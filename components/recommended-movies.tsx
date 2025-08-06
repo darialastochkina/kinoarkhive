@@ -23,7 +23,7 @@ export function RecommendedMovies({ onSelectMovie }: RecommendedMoviesProps) {
         const recommendedMovies = await movieService.getRecommendedMovies(category, 10)
         setMovies(recommendedMovies)
       } catch (error) {
-        console.error("Ошибка при загрузке рекомендуемых фильмов:", error)
+        // Ошибка при загрузке рекомендуемых фильмов
       } finally {
         setIsLoading(false)
       }

@@ -100,6 +100,8 @@ export default function Home() {
 
   // Загрузка популярного контента при старте и при изменении типа медиа
   useEffect(() => {
+    // Перемешиваем фильмы при каждой загрузке страницы
+    tmdbService.reshuffleMoviePool()
     loadPopularContent()
   }, [mediaType])
 
@@ -142,7 +144,7 @@ export default function Home() {
         setHasMoreMovies(contentWithUserData.length >= 20)
       }
     } catch (error) {
-      console.error("Ошибка при загрузке контента:", error)
+      // console.error("Ошибка при загрузке контента:", error)
       // Убрано сообщение об ошибке для чистоты интерфейса
       // setError("Не удалось загрузить контент. Используется локальная база данных.")
       setDataSource("local")
@@ -199,7 +201,7 @@ export default function Home() {
         source === "api" && searchResults.length === 20 && allMovies.length + searchResults.length < total,
       )
     } catch (error) {
-      console.error("Ошибка при поиске:", error)
+      // console.error("Ошибка при поиске:", error)
       // Убрано сообщение об ошибке для чистоты интерфейса
       // setError("Ошибка поиска. Используется локальная база данных.")
       setDataSource("local")
@@ -241,7 +243,7 @@ export default function Home() {
         }
       }
     } catch (error) {
-      console.error("Ошибка при загрузке дополнительного контента:", error)
+      // console.error("Ошибка при загрузке дополнительного контента:", error)
       // Убрано сообщение об ошибке для чистоты интерфейса
       // setError("Ошибка загрузки дополнительных результатов")
       setHasMoreMovies(false)
@@ -261,7 +263,7 @@ export default function Home() {
       }
       return details
     } catch (error) {
-      console.error("Ошибка загрузки деталей:", error)
+      // console.error("Ошибка загрузки деталей:", error)
       return null
     }
   }
@@ -335,7 +337,7 @@ export default function Home() {
   // ИСПРАВЛЕНО: Применение фильтров с правильной логикой
   const handleApplyFilters = useCallback(
     (genreIds: number[], specialFilters: string[]) => {
-      console.log("Применяем фильтры:", { genreIds, specialFilters })
+      // console.log("Применяем фильтры:", { genreIds, specialFilters })
 
       setSelectedGenres(genreIds)
       setSelectedSpecials(specialFilters)
@@ -361,7 +363,7 @@ export default function Home() {
             return genreIds.some((id) => getGenreName(id) === g)
           })
         })
-        console.log("После фильтрации по жанрам:", filteredMovies.length)
+        // console.log("После фильтрации по жанрам:", filteredMovies.length)
       }
 
       // ИСПРАВЛЕНО: Фильтрация по специальным подборкам
@@ -370,21 +372,21 @@ export default function Home() {
           switch (filter) {
             case "new":
               filteredMovies = filteredMovies.filter((movie) => movie.year >= 2023)
-              console.log("После фильтра 'Новинки':", filteredMovies.length)
+              // console.log("После фильтра 'Новинки':", filteredMovies.length)
               break
             case "popular":
               filteredMovies = [...filteredMovies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-              console.log("После сортировки по популярности:", filteredMovies.length)
+              // console.log("После сортировки по популярности:", filteredMovies.length)
               break
             case "top_rated":
               filteredMovies = filteredMovies.filter((movie) => (movie.rating || 0) >= 8.0)
-              console.log("После фильтра 'Высокий рейтинг' (>=8.0):", filteredMovies.length)
+              // console.log("После фильтра 'Высокий рейтинг' (>=8.0):", filteredMovies.length)
               break
           }
         })
       }
 
-      console.log("Итоговое количество фильмов после фильтрации:", filteredMovies.length)
+      // console.log("Итоговое количество фильмов после фильтрации:", filteredMovies.length)
       setMovies(filteredMovies)
     },
     [allMovies],
@@ -643,10 +645,10 @@ export default function Home() {
                   <Button
                     variant="outline"
                     onClick={() => setShowFilterDialog(true)}
-                    className="netflix-button-outline"
+                    className="netflix-button-outline border-[#8b1c24] text-[#8b1c24] hover:bg-[#8b1c24] hover:text-white"
                   >
                     <Filter className="h-4 w-4 mr-2" />
-                    Фильтры {getActiveFiltersText()}
+                    Фильтры по жанрам {getActiveFiltersText()}
                   </Button>
                 </div>
               </div>
@@ -724,8 +726,8 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Кнопка "Ещё" */}
-            {activeTab === "all" && hasMoreMovies && (
+            {/* Кнопка "Ещё" - всегда показываем если есть фильмы */}
+            {activeTab === "all" && allMovies.length > 0 && filteredMovies.length < 100 && (
               <div className="text-center mt-12">
                 <Button
                   onClick={loadMoreMovies}

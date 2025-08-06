@@ -23,9 +23,9 @@ export class MovieService {
       this.resetUsedMovies()
 
       this.isInitialized = true
-      console.log(`Загружено ${this.movies.length} фильмов`)
+      // console.log(`Загружено ${this.movies.length} фильмов`)
     } catch (error) {
-      console.error("Ошибка при инициализации базы фильмов:", error)
+      // console.error("Ошибка при инициализации базы фильмов:", error)
       // Используем базовый набор фильмов
       this.movies = [...preloadedMovies]
       this.isInitialized = true

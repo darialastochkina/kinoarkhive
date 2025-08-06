@@ -319,7 +319,7 @@ class TMDBService {
     // Перемешиваем пул фильмов для разнообразия при каждой загрузке
     this.moviePool = this.moviePool.sort(() => Math.random() - 0.5)
     
-    console.log(`Инициализирован пул из ${this.moviePool.length} фильмов`)
+    // console.log(`Инициализирован пул из ${this.moviePool.length} фильмов`)
   }
 
   // Проверка работоспособности API
@@ -338,7 +338,7 @@ class TMDBService {
 
       return this.isApiWorking
     } catch (error) {
-      console.error("Ошибка проверки TMDB API:", error)
+      // console.error("Ошибка проверки TMDB API:", error)
       this.isApiWorking = false
       return false
     }
@@ -382,7 +382,7 @@ class TMDBService {
 
       return data
     } catch (error) {
-      console.error("Ошибка запроса к TMDB:", error)
+      // console.error("Ошибка запроса к TMDB:", error)
       throw error
     }
   }
@@ -416,7 +416,7 @@ class TMDBService {
 
         return { movies, totalResults, source: "api" }
       } catch (error) {
-        console.error("Ошибка поиска через TMDB API:", error)
+        // console.error("Ошибка поиска через TMDB API:", error)
         this.isApiWorking = false
       }
     }
@@ -490,7 +490,7 @@ class TMDBService {
           return { movies: results, source: "api" }
         }
       } catch (error) {
-        console.error("Ошибка получения популярного контента:", error)
+        // console.error("Ошибка получения популярного контента:", error)
       }
     }
 
@@ -525,7 +525,7 @@ class TMDBService {
     const shuffled = availableMovies.sort(() => 0.5 - Math.random())
     const newMovies = shuffled.slice(0, 20)
 
-    console.log(`Загружено ${newMovies.length} новых фильмов (страница ${page})`)
+    // console.log(`Загружено ${newMovies.length} новых фильмов (страница ${page})`)
 
     return { movies: newMovies, source: "local" }
   }
@@ -543,7 +543,7 @@ class TMDBService {
 
         return this.convertTMDBToMovie(data, true)
       } catch (error) {
-        console.error("Ошибка получения деталей:", error)
+        // console.error("Ошибка получения деталей:", error)
       }
     }
 
@@ -638,6 +638,12 @@ class TMDBService {
 
   resetRequestCount() {
     this.requestCount = 0
+  }
+
+  // Перемешать пул фильмов для обновления контента
+  reshuffleMoviePool() {
+    this.moviePool = this.moviePool.sort(() => Math.random() - 0.5)
+    // console.log("Пул фильмов перемешан")
   }
 }
 

@@ -44,7 +44,7 @@ export function MovieCard({
           setDetailedMovie(details)
         }
       } catch (error) {
-        console.error("Ошибка загрузки деталей:", error)
+        // console.error("Ошибка загрузки деталей:", error)
       } finally {
         setIsLoadingDetails(false)
       }
@@ -363,10 +363,10 @@ export function MovieCard({
                   <button
                     key={rating}
                     onClick={() => setSelectedRating(rating)}
-                    className="p-1 transition-colors"
+                    className="p-0.5 transition-colors"
                   >
                     <Star
-                      className={`h-6 w-6 ${
+                      className={`h-5 w-5 ${
                         rating <= selectedRating
                           ? "text-yellow-400 fill-current"
                           : "text-gray-400 hover:text-yellow-300"

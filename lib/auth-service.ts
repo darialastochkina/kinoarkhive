@@ -66,7 +66,7 @@ class AuthService {
     if (typeof window !== "undefined") {
       localStorage.setItem("movieapp_all_users", JSON.stringify(existingUsers))
     }
-    console.log("Тестовые пользователи инициализированы:", testUsers)
+    // Тестовые пользователи инициализированы
   }
 
   // Загрузка пользователя из localStorage
@@ -78,7 +78,7 @@ class AuthService {
         this.currentUser = JSON.parse(userData)
       }
     } catch (error) {
-      console.error("Ошибка загрузки пользователя:", error)
+      // Ошибка загрузки пользователя
     }
   }
 
@@ -89,7 +89,7 @@ class AuthService {
       localStorage.setItem(this.storageKey, JSON.stringify(user))
       this.currentUser = user
     } catch (error) {
-      console.error("Ошибка сохранения пользователя:", error)
+      // Ошибка сохранения пользователя
     }
   }
 
@@ -124,8 +124,7 @@ class AuthService {
   async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
       const users = this.getAllUsers()
-      console.log("Все пользователи:", users)
-      console.log("Попытка входа:", email, password)
+      // Проверяем все пользователи и пытаемся войти
 
       const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
 
@@ -138,7 +137,7 @@ class AuthService {
 
       // Проверяем пароль
       const storedPassword = localStorage.getItem(`password_${user.id}`)
-      console.log("Сохраненный пароль для пользователя:", storedPassword)
+      // Проверяем сохраненный пароль
 
       if (storedPassword !== password) {
         return {
@@ -148,15 +147,15 @@ class AuthService {
       }
 
       this.saveUser(user)
-      console.log("Успешный вход:", user)
+      // Успешный вход
       
       // Загружаем избранные для вошедшего пользователя
       const userFavorites = this.loadFavorites()
-      console.log(`Загружено ${userFavorites.length} избранных для пользователя ${user.name}`)
+      // Загружены избранные для пользователя
       
       return { success: true }
     } catch (error) {
-      console.error("Ошибка при входе:", error)
+      // Ошибка при входе
       return { success: false, error: "Ошибка при входе" }
     }
   }
@@ -186,7 +185,7 @@ class AuthService {
       localStorage.setItem("movieapp_all_users", JSON.stringify(users))
       localStorage.setItem(`password_${user.id}`, password)
     } catch (error) {
-      console.error("Ошибка сохранения пользователя:", error)
+      // Ошибка сохранения пользователя
     }
   }
 
@@ -197,7 +196,7 @@ class AuthService {
       const users = localStorage.getItem("movieapp_all_users")
       return users ? JSON.parse(users) : []
     } catch (error) {
-      console.error("Ошибка загрузки пользователей:", error)
+      // Ошибка загрузки пользователей
       return []
     }
   }
@@ -215,7 +214,7 @@ class AuthService {
         localStorage.setItem(this.favoritesKey, JSON.stringify(favorites))
       }
     } catch (error) {
-      console.error("Ошибка сохранения избранных:", error)
+      // Ошибка сохранения избранных
     }
   }
 
@@ -245,7 +244,7 @@ class AuthService {
         return favorites ? JSON.parse(favorites) : []
       }
     } catch (error) {
-      console.error("Ошибка загрузки избранных:", error)
+      // Ошибка загрузки избранных
       return []
     }
   }
@@ -261,7 +260,7 @@ class AuthService {
         localStorage.setItem("movieapp_watchlist_global", JSON.stringify(watchlist))
       }
     } catch (error) {
-      console.error("Ошибка сохранения watchlist:", error)
+      // Ошибка сохранения watchlist
     }
   }
 
@@ -278,7 +277,7 @@ class AuthService {
         return watchlist ? JSON.parse(watchlist) : []
       }
     } catch (error) {
-      console.error("Ошибка загрузки watchlist:", error)
+      // Ошибка загрузки watchlist
       return []
     }
   }
@@ -294,7 +293,7 @@ class AuthService {
         localStorage.setItem("movieapp_watched_global", JSON.stringify(watched))
       }
     } catch (error) {
-      console.error("Ошибка сохранения watched:", error)
+      // Ошибка сохранения watched
     }
   }
 
@@ -311,7 +310,7 @@ class AuthService {
         return watched ? JSON.parse(watched) : []
       }
     } catch (error) {
-      console.error("Ошибка загрузки watched:", error)
+      // Ошибка загрузки watched
       return []
     }
   }
