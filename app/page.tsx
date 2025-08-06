@@ -49,9 +49,10 @@ export default function Home() {
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all")
   const [currentUser, setCurrentUser] = useState<import("@/lib/auth-service").User | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
-  const [favoriteMovieIds, setFavoriteMovieIds] = useState<string[]>([])
   const [watchlistMovieIds, setWatchlistMovieIds] = useState<string[]>([])
-  const [watchedMovies, setWatchedMovies] = useState<import("@/lib/auth-service").WatchedMovie[]>([])
+  const [watchedMovies, setWatchedMovies] = useState<import("@/lib/auth-service").WatchedMovie[]>([])  
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
+  const [selectedMovieForRating, setSelectedMovieForRating] = useState<Movie | null>(null)
 
   // Отслеживание скролла для кнопки "наверх"
   useEffect(() => {
@@ -67,31 +68,34 @@ export default function Home() {
     const authService = getAuthService()
     if (authService) {
       setCurrentUser(authService.getCurrentUser())
-      setFavoriteMovieIds(authService.loadFavorites())
       setWatchlistMovieIds(authService.loadWatchlist())
       setWatchedMovies(authService.loadWatched())
     }
   }, [])
 
-  // ИСПРАВЛЕНО: Обновляем статус избранных во всех фильмах
-  const updateMoviesWithFavorites = useCallback(() => {
+  // Обновляем статус фильмов в списках пользователя  
+  const updateMoviesWithUserData = useCallback(() => {
     setMovies((prev) =>
       prev.map((movie) => ({
         ...movie,
-        isFavorite: favoriteMovieIds.includes(movie.id),
+        isInWatchlist: watchlistMovieIds.includes(movie.id),
+        isWatched: watchedMovies.some(w => w.movieId === movie.id),
+        userRating: watchedMovies.find(w => w.movieId === movie.id)?.rating,
       })),
     )
     setAllMovies((prev) =>
       prev.map((movie) => ({
         ...movie,
-        isFavorite: favoriteMovieIds.includes(movie.id),
+        isInWatchlist: watchlistMovieIds.includes(movie.id),
+        isWatched: watchedMovies.some(w => w.movieId === movie.id),
+        userRating: watchedMovies.find(w => w.movieId === movie.id)?.rating,
       })),
     )
-  }, [favoriteMovieIds])
+  }, [watchlistMovieIds, watchedMovies])
 
   useEffect(() => {
-    updateMoviesWithFavorites()
-  }, [updateMoviesWithFavorites])
+    updateMoviesWithUserData()
+  }, [updateMoviesWithUserData])
 
   // Загрузка популярного контента при старте и при изменении типа медиа
   useEffect(() => {
@@ -99,14 +103,16 @@ export default function Home() {
   }, [mediaType])
 
   // ИСПРАВЛЕНО: Функция для применения избранных к новым фильмам
-  const applyFavoritesToMovies = useCallback(
+  const applyUserDataToMovies = useCallback(
     (moviesList: Movie[]): Movie[] => {
       return moviesList.map((movie) => ({
         ...movie,
-        isFavorite: favoriteMovieIds.includes(movie.id),
+        isInWatchlist: watchlistMovieIds.includes(movie.id),
+        isWatched: watchedMovies.some(w => w.movieId === movie.id),
+        userRating: watchedMovies.find(w => w.movieId === movie.id)?.rating,
       }))
     },
-    [favoriteMovieIds],
+    [watchlistMovieIds, watchedMovies],
   )
 
   // Загрузка популярного контента
@@ -117,10 +123,10 @@ export default function Home() {
     try {
       const { movies: popularContent, source } = await tmdbService.getPopularMovies(mediaType)
 
-      const contentWithFavorites = applyFavoritesToMovies(popularContent)
+      const contentWithUserData = applyUserDataToMovies(popularContent)
 
-      setMovies(contentWithFavorites)
-      setAllMovies(contentWithFavorites)
+      setMovies(contentWithUserData)
+      setAllMovies(contentWithUserData)
       setDataSource(source)
       setCurrentPage(1)
       setTotalResults(contentWithFavorites.length)
@@ -161,11 +167,11 @@ export default function Home() {
         source,
       } = await tmdbService.searchMovies(searchTerm, page, mediaType)
 
-      const resultsWithFavorites = applyFavoritesToMovies(searchResults)
+      const resultsWithUserData = applyUserDataToMovies(searchResults)
 
       if (page === 1) {
-        setMovies(resultsWithFavorites)
-        setAllMovies(resultsWithFavorites)
+        setMovies(resultsWithUserData)
+        setAllMovies(resultsWithUserData)
         setCurrentPage(1)
       } else {
         const newMovies = [...allMovies, ...resultsWithFavorites].filter(
@@ -201,8 +207,8 @@ export default function Home() {
       } else {
         const { movies: moreMovies } = await tmdbService.getMoreMovies(allMovies, mediaType, currentPage + 1)
         if (moreMovies.length > 0) {
-          const moreMoviesWithFavorites = applyFavoritesToMovies(moreMovies)
-          const uniqueMovies = [...allMovies, ...moreMoviesWithFavorites].filter(
+          const moreMoviesWithUserData = applyUserDataToMovies(moreMovies)
+          const uniqueMovies = [...allMovies, ...moreMoviesWithUserData].filter(
             (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
           )
           setMovies(uniqueMovies)
@@ -229,7 +235,9 @@ export default function Home() {
     try {
       const details = await tmdbService.getMovieDetails(tmdbId, mediaType)
       if (details) {
-        details.isFavorite = favoriteMovieIds.includes(details.id)
+        details.isInWatchlist = watchlistMovieIds.includes(details.id)
+        details.isWatched = watchedMovies.some(w => w.movieId === details.id)
+        details.userRating = watchedMovies.find(w => w.movieId === details.id)?.rating
       }
       return details
     } catch (error) {
@@ -238,27 +246,70 @@ export default function Home() {
     }
   }
 
-  // ИСПРАВЛЕНО: Переключение статуса избранного с немедленным сохранением
-  const toggleFavorite = useCallback(
+  // Обработчик для добавления/удаления из "Посмотрю позже"
+  const toggleWatchlist = useCallback(
     (id: string) => {
       const authService = getAuthService()
       if (!currentUser) {
         setShowAuthDialog(true)
         return
       }
-      let actualFavorites: string[] = []
-      if (authService) {
-        actualFavorites = authService.loadFavorites()
-      } else {
-        actualFavorites = favoriteMovieIds
-      }
-      const newFavoriteIds = actualFavorites.includes(id)
-        ? actualFavorites.filter((favId) => favId !== id)
-        : [...actualFavorites, id]
-      setFavoriteMovieIds(newFavoriteIds)
-      if (authService) authService.saveFavorites(newFavoriteIds)
+      
+      const newWatchlistIds = watchlistMovieIds.includes(id)
+        ? watchlistMovieIds.filter((wId) => wId !== id)
+        : [...watchlistMovieIds, id]
+      
+      setWatchlistMovieIds(newWatchlistIds)
+      if (authService) authService.saveWatchlist(newWatchlistIds)
     },
-    [currentUser, favoriteMovieIds],
+    [currentUser, watchlistMovieIds],
+  )
+
+  // Обработчик для отметки как "Просмотрено" с оценкой
+  const markAsWatched = useCallback(
+    (movie: Movie, rating?: number, comment?: string) => {
+      const authService = getAuthService()
+      if (!currentUser) {
+        setShowAuthDialog(true)
+        return
+      }
+      
+      const watchedMovie = {
+        movieId: movie.id,
+        title: movie.title,
+        rating: rating || 0,
+        comment: comment || '',
+        watchedAt: new Date().toISOString(),
+        poster: movie.posterUrl || ''
+      }
+      
+      const newWatchedMovies = watchedMovies.filter(w => w.movieId !== movie.id)
+      newWatchedMovies.push(watchedMovie)
+      
+      setWatchedMovies(newWatchedMovies)
+      if (authService) authService.saveWatched(newWatchedMovies)
+      
+      // Удаляем из "Посмотрю позже" если там есть
+      if (watchlistMovieIds.includes(movie.id)) {
+        const newWatchlistIds = watchlistMovieIds.filter(id => id !== movie.id)
+        setWatchlistMovieIds(newWatchlistIds)
+        if (authService) authService.saveWatchlist(newWatchlistIds)
+      }
+    },
+    [currentUser, watchedMovies, watchlistMovieIds],
+  )
+  
+  // Обработчик для удаления из "Просмотрено"
+  const removeFromWatched = useCallback(
+    (movieId: string) => {
+      const authService = getAuthService()
+      if (!currentUser) return
+      
+      const newWatchedMovies = watchedMovies.filter(w => w.movieId !== movieId)
+      setWatchedMovies(newWatchedMovies)
+      if (authService) authService.saveWatched(newWatchedMovies)
+    },
+    [currentUser, watchedMovies],
   )
 
   // ИСПРАВЛЕНО: Применение фильтров с правильной логикой
@@ -360,7 +411,7 @@ export default function Home() {
     if (authService) {
       setCurrentUser(authService.getCurrentUser())
       // Загружаем все списки для нового пользователя
-      setFavoriteMovieIds(authService.loadFavorites())
+      // favoriteMovieIds больше не используется
       setWatchlistMovieIds(authService.loadWatchlist())
       setWatchedMovies(authService.loadWatched())
     }
@@ -371,7 +422,7 @@ export default function Home() {
     const authService = getAuthService()
     if (authService) authService.logout()
     setCurrentUser(null)
-    setFavoriteMovieIds([])
+    // favoriteMovieIds больше не используется
     setWatchlistMovieIds([])
     setWatchedMovies([])
   }
@@ -391,16 +442,15 @@ export default function Home() {
         // Фильмы в списке "Просмотрено"
         const watchedIds = watchedMovies.map(w => w.movieId)
         return allMovies.filter((movie) => watchedIds.includes(movie.id))
-      case "favorites":
-        // Ищем избранные среди ВСЕХ загруженных фильмов
-        return allMovies.filter((movie) => favoriteMovieIds.includes(movie.id))
+      // Категория "Избранное" убрана
       default:
         return movies
     }
   }
 
   const filteredMovies = getFilteredMovies()
-  const favoritesCount = favoriteMovieIds.length
+  const watchlistCount = watchlistMovieIds.length
+  const watchedCount = watchedMovies.length
 
   // Формирование текста активных фильтров
   const getActiveFiltersText = () => {
@@ -515,24 +565,19 @@ export default function Home() {
                   </TabsTrigger>
                   <TabsTrigger value="watchlist" className="netflix-tab">
                     <Calendar className="h-4 w-4 mr-2" />
-                    Посмотрю позже
+                    Посмотрю позже {currentUser && watchlistCount > 0 && `(${watchlistCount})`}
                   </TabsTrigger>
                   <TabsTrigger value="watched" className="netflix-tab">
                     <CheckSquare className="h-4 w-4 mr-2" />
-                    Просмотрено
-                  </TabsTrigger>
-                  <TabsTrigger value="favorites" className="netflix-tab">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Избранные {currentUser && favoritesCount > 0 && `(${favoritesCount})`}
+                    Просмотрено {currentUser && watchedCount > 0 && `(${watchedCount})`}
                   </TabsTrigger>
                 </TabsList>
 
                 <div className="flex items-center gap-3">
                   {/* Счетчик результатов */}
                   <span className="text-sm text-gray-400">
-                    {activeTab === "favorites" && `${favoritesCount} избранных`}
-                    {activeTab === "watchlist" && `${watchlistMovieIds.length} в списке`}
-                    {activeTab === "watched" && `${watchedMovies.length} просмотрено`}
+                    {activeTab === "watchlist" && `${watchlistCount} в списке`}
+                    {activeTab === "watched" && `${watchedCount} просмотрено`}
                     {activeTab === "all" && `${filteredMovies.length} фильмов`}
                   </span>
 
@@ -550,7 +595,6 @@ export default function Home() {
               <TabsContent value="all" className="mt-0" />
               <TabsContent value="watchlist" className="mt-0" />
               <TabsContent value="watched" className="mt-0" />
-              <TabsContent value="favorites" className="mt-0" />
             </Tabs>
           </div>
         </div>
@@ -576,7 +620,7 @@ export default function Home() {
           </div>
         )}
 
-        {!currentUser && (activeTab === "favorites" || activeTab === "watchlist" || activeTab === "watched") && (
+        {!currentUser && (activeTab === "watchlist" || activeTab === "watched") && (
           <div className="max-w-2xl mx-auto mb-6">
             <Alert className="border-[#5e1414]/50 bg-[#5e1414]/10">
               <User className="h-4 w-4 text-[#5e1414]" />
@@ -596,7 +640,8 @@ export default function Home() {
         ) : filteredMovies.length === 0 ? (
           <div className="text-center py-20">
             <div className="netflix-empty-state p-8">
-              {activeTab === "favorites" && <Heart className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              {activeTab === "watchlist" && <Calendar className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
+              {activeTab === "watched" && <CheckSquare className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
               {activeTab === "watchlist" && <Calendar className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
               {activeTab === "watched" && <CheckSquare className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
               {activeTab === "all" && <Film className="h-16 w-16 mx-auto mb-6 text-[#5e1414]" />}
@@ -631,7 +676,9 @@ export default function Home() {
                 <MovieCard
                   key={movie.id}
                   movie={movie}
-                  onToggleFavorite={toggleFavorite}
+                  onToggleWatchlist={toggleWatchlist}
+                  onMarkAsWatched={markAsWatched}
+                  onRemoveFromWatched={removeFromWatched}
                   onLoadDetails={(tmdbId) => loadMovieDetails(tmdbId, movie.mediaType)}
                 />
               ))}

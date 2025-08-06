@@ -5,20 +5,30 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Star, Calendar } from "lucide-react"
+import { Star, Calendar, CheckSquare, Plus, X } from "lucide-react"
 import type { Movie } from "@/lib/tmdb-service"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface MovieCardProps {
   movie: Movie
-  onToggleFavorite: (id: string) => void
+  onToggleWatchlist: (id: string) => void
+  onMarkAsWatched: (movie: Movie, rating?: number, comment?: string) => void
+  onRemoveFromWatched: (movieId: string) => void
   onLoadDetails?: (tmdbId: number, mediaType: "movie" | "tv") => Promise<Movie | null>
 }
 
-export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardProps) {
+export function MovieCard({ 
+  movie, 
+  onToggleWatchlist, 
+  onMarkAsWatched, 
+  onRemoveFromWatched, 
+  onLoadDetails 
+}: MovieCardProps) {
   const [showDetails, setShowDetails] = useState(false)
   const [detailedMovie, setDetailedMovie] = useState<Movie | null>(null)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
+  const [selectedRating, setSelectedRating] = useState(0)
 
   const handleShowDetails = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -41,12 +51,31 @@ export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardP
     }
   }
 
-  // Правильная обработка клика по сердечку с бордовым цветом
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  // Обработчик для "Посмотрю позже"
+  const handleWatchlistClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log("Клик по сердечку для фильма:", movie.id, "текущий статус:", movie.isFavorite)
-    onToggleFavorite(movie.id)
+    onToggleWatchlist(movie.id)
+  }
+  
+  // Обработчик для "Просмотрено" - открываем диалог оценки
+  const handleWatchedClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (movie.isWatched) {
+      // Удаляем из просмотренных
+      onRemoveFromWatched(movie.id)
+    } else {
+      // Открываем диалог для оценки
+      setShowRatingDialog(true)
+      setSelectedRating(movie.userRating || 0)
+    }
+  }
+  
+  // Сохранение оценки
+  const handleSaveRating = () => {
+    onMarkAsWatched(movie, selectedRating)
+    setShowRatingDialog(false)
   }
 
   const movieToShow = detailedMovie || movie
@@ -65,29 +94,40 @@ export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardP
             }}
           />
 
-          {/* Кнопка избранного с бордовым цветом */}
-          <div
-            className={`absolute top-3 right-3 ${
-              movie.isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            } transition-all duration-300`}
-          >
+          {/* Кнопки действий */}
+          <div className={`absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300`}>
+            {/* Кнопка "Посмотрю позже" */}
             <Button
               variant="ghost"
-              size="icon"
-              onClick={handleFavoriteClick}
-              className="netflix-favorite-button"
-              title={movie.isFavorite ? "Убрать из избранного" : "Добавить в избранное"}
+              size="sm"
+              onClick={handleWatchlistClick}
+              className={`netflix-favorite-button p-2 transition-all duration-200 ${
+                movie.isInWatchlist
+                  ? "text-[#5e1414] hover:text-[#8b1c24] bg-[#5e1414]/20"
+                  : "text-gray-400 hover:text-[#5e1414] hover:bg-[#5e1414]/10"
+              }`}
+              title={movie.isInWatchlist ? "Убрать из списка просмотра" : "Добавить в 'Посмотрю позже'"}
             >
-              <Heart
-                className={`h-5 w-5 transition-all duration-200 ${
-                  movie.isFavorite ? "heart-favorite scale-110" : "heart-not-favorite"
-                }`}
-                style={{
-                  fill: movie.isFavorite ? "#8b1c24" : "transparent",
-                  color: movie.isFavorite ? "#8b1c24" : "#ffffff",
-                  stroke: movie.isFavorite ? "#8b1c24" : "#ffffff",
-                }}
-              />
+              {movie.isInWatchlist ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+            </Button>
+            
+            {/* Кнопка "Просмотрено" */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleWatchedClick}
+              className={`netflix-favorite-button p-2 transition-all duration-200 ${
+                movie.isWatched
+                  ? "text-green-500 hover:text-green-400 bg-green-500/20"
+                  : "text-gray-400 hover:text-green-500 hover:bg-green-500/10"
+              }`}
+              title={movie.isWatched ? "Отменить как просмотренный" : "Отметить как просмотренный"}
+            >
+              <CheckSquare className={`h-4 w-4 ${movie.isWatched ? "fill-current" : ""}`} />
             </Button>
           </div>
 
@@ -111,6 +151,17 @@ export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardP
             <h3 className="text-base font-bold text-white drop-shadow-lg mb-2 line-clamp-2" title={movie.title}>
               {movie.title}
             </h3>
+            
+            {/* Показываем оценку если фильм просмотрен */}
+            {movie.isWatched && movie.userRating && (
+              <div className="flex items-center gap-1 mt-2">
+                <span className="text-xs text-gray-300">Ваша оценка:</span>
+                <div className="flex items-center gap-1 px-2 py-1 bg-[#5e1414]/20 rounded-full">
+                  <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                  <span className="text-xs text-yellow-400 font-medium">{movie.userRating}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -162,22 +213,52 @@ export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardP
                     />
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className={`w-full mt-4 netflix-favorite-button-large ${
-                      movie.isFavorite ? "netflix-button-favorited" : "netflix-button-outline"
-                    }`}
-                    onClick={handleFavoriteClick}
-                  >
-                    <Heart
-                      className={`h-4 w-4 mr-2 ${movie.isFavorite ? "fill-current" : ""}`}
-                      style={{
-                        fill: movie.isFavorite ? "#8b1c24" : "transparent",
-                        color: movie.isFavorite ? "#8b1c24" : "currentColor",
-                      }}
-                    />
-                    {movie.isFavorite ? "В избранном" : "Добавить в избранное"}
-                  </Button>
+                  {/* Новые кнопки действий */}
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      className={`flex-1 netflix-button-outline ${
+                        movie.isInWatchlist ? "bg-[#5e1414]/20 border-[#5e1414] text-[#5e1414]" : ""
+                      }`}
+                      onClick={handleWatchlistClick}
+                    >
+                      {movie.isInWatchlist ? (
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Убрать из списка
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Посмотрю позже
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      className={`flex-1 netflix-button-outline ${
+                        movie.isWatched ? "bg-green-500/20 border-green-500 text-green-400" : ""
+                      }`}
+                      onClick={handleWatchedClick}
+                    >
+                      <CheckSquare className={`h-4 w-4 mr-2 ${movie.isWatched ? "fill-current" : ""}`} />
+                      {movie.isWatched ? "Просмотрено" : "Отметить просмотренным"}
+                    </Button>
+                  </div>
+                  
+                  {/* Показываем оценку в модалке */}
+                  {movie.isWatched && movie.userRating && (
+                    <div className="mt-3 p-3 bg-[#5e1414]/20 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-300">Ваша оценка:</span>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                          <span className="text-yellow-400 font-medium">{movie.userRating}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Информация - компактнее */}
@@ -262,6 +343,56 @@ export function MovieCard({ movie, onToggleFavorite, onLoadDetails }: MovieCardP
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Диалог оценки */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent className="sm:max-w-md netflix-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-white">
+              Оцените фильм
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-white mb-2">{movie.title}</h3>
+              <div className="flex justify-center space-x-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    onClick={() => setSelectedRating(rating)}
+                    className="p-1 transition-colors"
+                  >
+                    <Star
+                      className={`h-8 w-8 ${
+                        rating <= selectedRating
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-400 hover:text-yellow-300"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              {selectedRating > 0 && (
+                <p className="text-center text-sm text-gray-400 mt-2">
+                  Ваша оценка: {selectedRating} звезд{selectedRating > 1 && selectedRating < 5 ? 'ы' : selectedRating === 1 ? 'а' : ''}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="ghost" onClick={() => setShowRatingDialog(false)}>
+                Отмена
+              </Button>
+              <Button 
+                onClick={handleSaveRating}
+                disabled={selectedRating === 0}
+                className="netflix-button"
+              >
+                Сохранить
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

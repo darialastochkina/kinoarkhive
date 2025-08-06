@@ -15,9 +15,9 @@ export class MovieService {
     try {
       // Используем предварительно загруженные фильмы
       this.movies = [...preloadedMovies]
-
-      // Генерируем дополнительные фильмы для демонстрации
-      this.generateAdditionalMovies()
+      
+      // Перемешиваем фильмы для разнообразия
+      this.shuffleMovies()
 
       this.isInitialized = true
       console.log(`Загружено ${this.movies.length} фильмов`)
@@ -31,30 +31,9 @@ export class MovieService {
     }
   }
 
-  // Генерация дополнительных фильмов для демонстрации
-  private generateAdditionalMovies(): void {
-    // Создаем копии существующих фильмов с измененными названиями для демонстрации
-    const baseMovies = [...preloadedMovies]
-    const additionalMovies: MovieData[] = []
-
-    // Создаем 100 дополнительных фильмов
-    for (let i = 0; i < 100; i++) {
-      const baseMovie = baseMovies[i % baseMovies.length]
-      const newId = 10000 + i
-
-      additionalMovies.push({
-        ...baseMovie,
-        id: newId,
-        title: `${baseMovie.title} ${Math.floor(i / baseMovies.length) + 2}`,
-        original_title: baseMovie.original_title
-          ? `${baseMovie.original_title} ${Math.floor(i / baseMovies.length) + 2}`
-          : undefined,
-        popularity: (baseMovie.popularity || 50) - (i % 10),
-        vote_average: ((baseMovie.vote_average || 7) - (i % 20) / 10) % 10,
-      })
-    }
-
-    this.movies = [...this.movies, ...additionalMovies]
+  // Перемешивание массива фильмов для разнообразия
+  private shuffleMovies(): void {
+    this.movies = [...preloadedMovies].sort(() => Math.random() - 0.5)
   }
 
   // Поиск фильмов
@@ -80,19 +59,34 @@ export class MovieService {
     return results.slice(0, 50).map((movie) => this.convertToMovie(movie))
   }
 
-  // Получение популярных фильмов
+  // Получение популярных фильмов с уникальностью
   async getPopularMovies(page = 1, pageSize = 20): Promise<Movie[]> {
     await this.initialize()
 
+    // Получаем неиспользованные фильмы
+    const unused = this.movies.filter(movie => !this.usedMovieIds.has(movie.id))
+    
+    // Если неиспользованных фильмов мало, сбрасываем кэш
+    if (unused.length < pageSize) {
+      this.resetUsedMovies()
+    }
+    
     // Сортируем по популярности
-    const sorted = [...this.movies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    const sorted = [...this.movies]
+      .filter(movie => !this.usedMovieIds.has(movie.id))
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
 
     // Вычисляем начальный и конечный индексы для пагинации
     const start = (page - 1) * pageSize
     const end = start + pageSize
 
+    const result = sorted.slice(start, end)
+    
+    // Отмечаем фильмы как использованные
+    result.forEach(movie => this.usedMovieIds.add(movie.id))
+
     // Возвращаем фильмы для текущей страницы
-    return sorted.slice(start, end).map((movie) => this.convertToMovie(movie))
+    return result.map((movie) => this.convertToMovie(movie))
   }
 
   // Получение фильмов по жанру
@@ -112,8 +106,10 @@ export class MovieService {
     return filtered.slice(start, end).map((movie) => this.convertToMovie(movie))
   }
 
-  // Получение рекомендуемых фильмов по категориям
-  async getRecommendedMovies(category: string, count = 10): Promise<Movie[]> {
+  // Получение рекомендуемых фильмов по категориям с уникальной логикой
+  private usedMovieIds = new Set<number>()
+  
+  async getRecommendedMovies(category: string, count = 10, offset = 0): Promise<Movie[]> {
     await this.initialize()
 
     let filtered: MovieData[] = []
@@ -121,44 +117,65 @@ export class MovieService {
     switch (category) {
       case "popular":
         // Самые популярные фильмы
-        filtered = [...this.movies].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+        filtered = [...this.movies]
+          .filter(movie => !this.usedMovieIds.has(movie.id))
+          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
         break
       case "top_rated":
         // Фильмы с высоким рейтингом
-        filtered = [...this.movies].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))
+        filtered = [...this.movies]
+          .filter(movie => !this.usedMovieIds.has(movie.id))
+          .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))
         break
       case "classics":
         // Классические фильмы (до 1990 года)
         filtered = this.movies
           .filter((movie) => {
             const year = getYearFromDate(movie.release_date)
-            return year && year < 1990
+            return year && year < 1990 && !this.usedMovieIds.has(movie.id)
           })
           .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))
         break
       case "recent":
-        // Недавние фильмы (последние 2 года)
+        // Недавние фильмы (последние 5 лет)
         const currentYear = new Date().getFullYear()
         filtered = this.movies
           .filter((movie) => {
             const year = getYearFromDate(movie.release_date)
-            return year && year >= currentYear - 2
+            return year && year >= currentYear - 5 && !this.usedMovieIds.has(movie.id)
           })
           .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
         break
       default:
         // По умолчанию возвращаем случайные фильмы
-        filtered = this.getRandomMovies(count * 2)
+        filtered = this.getRandomUniqueMovies(count * 2)
     }
 
-    // Возвращаем первые N результатов
-    return filtered.slice(0, count).map((movie) => this.convertToMovie(movie))
+    // Применяем offset для пагинации
+    const result = filtered.slice(offset, offset + count)
+    
+    // Добавляем ID использованных фильмов
+    result.forEach(movie => this.usedMovieIds.add(movie.id))
+    
+    return result.map((movie) => this.convertToMovie(movie))
   }
 
   // Получение случайных фильмов
   getRandomMovies(count = 10): MovieData[] {
     const shuffled = [...this.movies].sort(() => 0.5 - Math.random())
     return shuffled.slice(0, count)
+  }
+  
+  // Получение уникальных случайных фильмов (не показанных ранее)
+  getRandomUniqueMovies(count = 10): MovieData[] {
+    const unused = this.movies.filter(movie => !this.usedMovieIds.has(movie.id))
+    const shuffled = [...unused].sort(() => 0.5 - Math.random())
+    return shuffled.slice(0, count)
+  }
+  
+  // Сброс кэша использованных фильмов
+  resetUsedMovies(): void {
+    this.usedMovieIds.clear()
   }
 
   // Преобразование MovieData в Movie
