@@ -16,7 +16,7 @@ export interface UserData {
 export interface WatchedMovie {
   movieId: string
   watchedAt: string
-  rating?: number // 1-5 звезд
+  rating?: number // 1-10 звезд
   comment?: string
 }
 
