@@ -237,6 +237,145 @@ const localMovieDatabase: Movie[] = [
     mediaType: "movie",
     popularity: 87.456,
   },
+  // Добавляем больше разнообразных фильмов
+  {
+    id: "local-6",
+    title: "Форрест Гамп",
+    originalTitle: "Forrest Gump",
+    year: 1994,
+    genre: ["Драма", "Мелодрама"],
+    description: "История умственно отсталого парня Форреста, который случайным образом оказывается свидетелем и участником важнейших событий американской истории XX века.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/clolk7rB5lAjs41SD0Vt6IXYLMm.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/7c9UVPPiTPltouxRVY6N9uugaVA.jpg",
+    isFavorite: false,
+    rating: 8.8,
+    director: "Роберт Земекис",
+    actors: "Том Хэнкс, Робин Райт",
+    runtime: "142 мин",
+    released: "6 июля 1994",
+    tmdbId: 13,
+    mediaType: "movie",
+    popularity: 65.843,
+  },
+  {
+    id: "local-7",
+    title: "Начало",
+    originalTitle: "Inception",
+    year: 2010,
+    genre: ["Фантастика", "Боевик", "Триллер"],
+    description: "Дом Кобб – талантливый вор, лучший в опасном искусстве извлечения: он крадет ценные секреты из глубин подсознания во время сна.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",
+    isFavorite: false,
+    rating: 8.4,
+    director: "Кристофер Нолан",
+    actors: "Леонардо ДиКаприо, Марион Котийяр",
+    runtime: "148 мин",
+    released: "16 июля 2010",
+    tmdbId: 27205,
+    mediaType: "movie",
+    popularity: 96.321,
+  },
+  {
+    id: "local-8",
+    title: "Зеленая миля",
+    originalTitle: "The Green Mile",
+    year: 1999,
+    genre: ["Драма", "Фэнтези", "Криминал"],
+    description: "Пол Эджкомб — начальник блока смертников в тюрьме «Холодная гора», каждый из узников которого однажды проходит «зеленую милю» по пути к месту казни.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/velWPhVMQeQKcxggNEU8YmIo52R.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/l6hQWH9eDksNJNiXWYRkWqikOdu.jpg",
+    isFavorite: false,
+    rating: 8.5,
+    director: "Фрэнк Дарабонт",
+    actors: "Том Хэнкс, Майкл Кларк Дункан",
+    runtime: "189 мин",
+    released: "10 декабря 1999",
+    tmdbId: 497,
+    mediaType: "movie",
+    popularity: 73.219,
+  },
+  {
+    id: "local-9",
+    title: "Гладиатор",
+    originalTitle: "Gladiator",
+    year: 2000,
+    genre: ["Боевик", "Драма", "Приключения"],
+    description: "Римский генерал Максимус вынужден стать гладиатором. Оказавшись на арене, где решается его судьба, Максимус должен бороться за свою жизнь.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/5vZw7ltCKI0JiOYTtRxaIC3DX0e.jpg",
+    isFavorite: false,
+    rating: 8.5,
+    director: "Ридли Скотт",
+    actors: "Рассел Кроу, Хоакин Феникс",
+    runtime: "155 мин",
+    released: "5 мая 2000",
+    tmdbId: 98,
+    mediaType: "movie",
+    popularity: 89.456,
+  },
+  {
+    id: "local-10",
+    title: "Список Шиндлера",
+    originalTitle: "Schindler's List",
+    year: 1993,
+    genre: ["Драма", "История", "Военный"],
+    description: "Фильм рассказывает реальную историю загадочного Оскара Шиндлера, члена нацистской партии, преуспевающего фабриканта, спасшего более тысячи евреев.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/loRmRzQXZeqG78TqZuyvSlEQfZb.jpg",
+    isFavorite: false,
+    rating: 9.0,
+    director: "Стивен Спилберг",
+    actors: "Лиам Нисон, Бен Кингсли",
+    runtime: "195 мин",
+    released: "30 ноября 1993",
+    tmdbId: 424,
+    mediaType: "movie",
+    popularity: 78.342,
+  },
+  // Добавляем больше сериалов
+  {
+    id: "local-tv-4",
+    title: "Очень странные дела",
+    originalTitle: "Stranger Things",
+    year: 2016,
+    genre: ["Фантастика", "Драма", "Ужасы"],
+    description: "1980-е годы, тихий провинциальный американский городок. Благоприятное течение местной жизни нарушает загадочное исчезновение подростка по имени Уилл.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
+    isFavorite: false,
+    rating: 8.7,
+    director: "Братья Даффер",
+    actors: "Милли Бобби Браун, Финн Вулфхард",
+    runtime: "50 мин/эпизод",
+    released: "15 июля 2016",
+    tmdbId: 66732,
+    mediaType: "tv",
+    seasons: 4,
+    episodes: 42,
+    popularity: 312.876,
+  },
+  {
+    id: "local-tv-5",
+    title: "Ведьмак",
+    originalTitle: "The Witcher",
+    year: 2019,
+    genre: ["Фэнтези", "Драма", "Боевик"],
+    description: "Ведьмак Геральт, мутант и убийца монстров, путешествует по континенту. На своем пути он встречает разных людей и ведьм, которые не всегда оказываются чудовищами.",
+    posterUrl: "https://image.tmdb.org/t/p/w500/7vjaCdMw15FEbXyLQTVa04URsPm.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/jBJWaqoSCiARWtfV0GlqHrcdidd.jpg",
+    isFavorite: false,
+    rating: 8.0,
+    director: "Лорен Шмидт Хиссрич",
+    actors: "Генри Кавилл, Аня Чалотра",
+    runtime: "60 мин/эпизод",
+    released: "20 декабря 2019",
+    tmdbId: 71912,
+    mediaType: "tv",
+    seasons: 3,
+    episodes: 24,
+    popularity: 198.543,
+  },
 ]
 
 // Карта жанров TMDB на русском
@@ -290,34 +429,35 @@ class TMDBService {
   private initializeMoviePool() {
     // Создаем большой пул разнообразных фильмов
     const baseMovies = [...localMovieDatabase]
+    
+    // Добавляем базовые фильмы
+    this.moviePool = [...baseMovies]
 
-    // Генерируем вариации существующих фильмов
-    const variations = [
-      "Режиссёрская версия",
-      "Расширенная версия",
-      "Специальное издание",
-      "Юбилейное издание",
-      "Коллекционное издание",
-      "Международная версия",
-      "Альтернативная версия",
-      "Восстановленная версия",
-    ]
-
-    baseMovies.forEach((movie, index) => {
+    // Создаем только несколько вариаций для популярных фильмов
+    const popularMovies = baseMovies
+      .filter(movie => (movie.popularity || 0) > 100)
+      .slice(0, 5)
+    
+    const variations = ["Режиссёрская версия", "Расширенная версия", "IMAX версия"]
+    
+    popularMovies.forEach((movie) => {
       variations.forEach((variation, varIndex) => {
         this.moviePool.push({
           ...movie,
           id: `${movie.id}-var-${varIndex}`,
           title: `${movie.title} (${variation})`,
-          tmdbId: movie.tmdbId + (varIndex + 1) * 1000,
-          popularity: (movie.popularity || 50) - varIndex * 5,
-          rating: movie.rating ? Math.max(6.0, movie.rating - varIndex * 0.1) : undefined,
+          tmdbId: movie.tmdbId + (varIndex + 1) * 10000,
+          popularity: (movie.popularity || 50) * 0.8,
+          rating: movie.rating,
         })
       })
     })
 
-    // Перемешиваем пул фильмов для разнообразия при каждой загрузке
-    this.moviePool = this.moviePool.sort(() => Math.random() - 0.5)
+    // Используем Fisher-Yates shuffle для настоящей рандомизации
+    for (let i = this.moviePool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.moviePool[i], this.moviePool[j]] = [this.moviePool[j], this.moviePool[i]]
+    }
     
     // console.log(`Инициализирован пул из ${this.moviePool.length} фильмов`)
   }
@@ -494,14 +634,19 @@ class TMDBService {
       }
     }
 
-    // ИСПРАВЛЕНО: Fallback к локальной базе с уникальными фильмами
-    let localResults = [...localMovieDatabase]
+    // ИСПРАВЛЕНО: Используем полный пул фильмов для большего разнообразия
+    let localResults = [...this.moviePool]
     if (mediaType !== "all") {
       localResults = localResults.filter((item) => item.mediaType === mediaType)
     }
 
-    // Перемешиваем и возвращаем случайную выборку
-    const shuffled = localResults.sort(() => 0.5 - Math.random())
+    // Генерируем уникальный seed на основе времени для настоящей рандомизации
+    const seed = Date.now()
+    const shuffled = localResults
+      .map((movie) => ({ movie, sort: Math.sin(seed + movie.tmdbId) }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ movie }) => movie)
+    
     return { movies: shuffled.slice(0, 20), source: "local" }
   }
 
@@ -635,6 +780,11 @@ class TMDBService {
       moviePoolSize: this.moviePool.length,
     }
   }
+  
+  // Получить все фильмы из пула
+  getAllMoviesFromPool(): Movie[] {
+    return [...this.moviePool]
+  }
 
   resetRequestCount() {
     this.requestCount = 0
@@ -642,7 +792,13 @@ class TMDBService {
 
   // Перемешать пул фильмов для обновления контента
   reshuffleMoviePool() {
-    this.moviePool = this.moviePool.sort(() => Math.random() - 0.5)
+    // Используем Fisher-Yates shuffle для настоящей рандомизации
+    const pool = [...this.moviePool]
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    this.moviePool = pool
     // console.log("Пул фильмов перемешан")
   }
 }

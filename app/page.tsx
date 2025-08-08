@@ -25,7 +25,6 @@ import { MovieProjector } from "@/components/movie-projector"
 import { FilterDialog } from "@/components/filter-dialog"
 import { AuthDialog } from "@/components/auth-dialog"
 import { tmdbService, type Movie } from "@/lib/tmdb-service"
-import { MovieService } from "@/lib/movie-service"
 export type { Movie }
 import { getAuthService } from "@/lib/auth-service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -47,13 +46,12 @@ export default function Home() {
   const [selectedGenres, setSelectedGenres] = useState<number[]>([])
   const [selectedSpecials, setSelectedSpecials] = useState<string[]>([])
   const [allMovies, setAllMovies] = useState<Movie[]>([])
+  const [fullMovieDatabase, setFullMovieDatabase] = useState<Movie[]>([]) // Полная база для папок
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all")
   const [currentUser, setCurrentUser] = useState<import("@/lib/auth-service").User | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [watchlistMovieIds, setWatchlistMovieIds] = useState<string[]>([])
   const [watchedMovies, setWatchedMovies] = useState<import("@/lib/auth-service").WatchedMovie[]>([])  
-  const [showRatingDialog, setShowRatingDialog] = useState(false)
-  const [selectedMovieForRating, setSelectedMovieForRating] = useState<Movie | null>(null)
 
   // Отслеживание скролла для кнопки "наверх"
   useEffect(() => {
@@ -92,6 +90,14 @@ export default function Home() {
         userRating: watchedMovies.find(w => w.movieId === movie.id)?.rating,
       })),
     )
+    setFullMovieDatabase((prev) =>
+      prev.map((movie) => ({
+        ...movie,
+        isInWatchlist: watchlistMovieIds.includes(movie.id),
+        isWatched: watchedMovies.some(w => w.movieId === movie.id),
+        userRating: watchedMovies.find(w => w.movieId === movie.id)?.rating,
+      })),
+    )
   }, [watchlistMovieIds, watchedMovies])
 
   useEffect(() => {
@@ -103,6 +109,8 @@ export default function Home() {
     // Перемешиваем фильмы при каждой загрузке страницы
     tmdbService.reshuffleMoviePool()
     loadPopularContent()
+    // Загружаем полную базу для папок
+    loadFullMovieDatabase()
   }, [mediaType])
 
   // ИСПРАВЛЕНО: Функция для применения избранных к новым фильмам
@@ -118,6 +126,29 @@ export default function Home() {
     [watchlistMovieIds, watchedMovies],
   )
 
+  // Загрузка полной базы данных фильмов для папок
+  const loadFullMovieDatabase = async () => {
+    try {
+      // Загружаем большой набор фильмов для папок
+      const { movies: fullDatabase } = await tmdbService.getMoreMovies([], "all", 1)
+      let allDatabaseMovies = [...fullDatabase]
+      
+      // Загружаем дополнительные страницы для полноты базы
+      for (let page = 2; page <= 5; page++) {
+        const { movies: moreMovies } = await tmdbService.getMoreMovies(allDatabaseMovies, "all", page)
+        if (moreMovies.length === 0) break
+        allDatabaseMovies = [...allDatabaseMovies, ...moreMovies].filter(
+          (movie, index, self) => self.findIndex(m => m.tmdbId === movie.tmdbId) === index
+        )
+      }
+      
+      const moviesWithUserData = applyUserDataToMovies(allDatabaseMovies)
+      setFullMovieDatabase(moviesWithUserData)
+    } catch (error) {
+      // Ошибка загрузки полной базы
+    }
+  }
+
   // Загрузка популярного контента
   const loadPopularContent = async () => {
     setIsLoading(true)
@@ -130,16 +161,15 @@ export default function Home() {
 
       setMovies(contentWithUserData)
       setAllMovies(contentWithUserData)
+      setFullMovieDatabase(contentWithUserData) // Инициализируем полную базу
       setDataSource(source)
       setCurrentPage(1)
       setTotalResults(contentWithUserData.length)
       // Устанавливаем hasMoreMovies для локальной базы тоже
       if (source === "local") {
-        // Для локальной базы показываем кнопку "Еще" если есть больше фильмов чем показано
-        const movieService = new MovieService()
-        await movieService.initialize()
-        const allAvailableMovies = await movieService.getPopularMovies(1, 1000)
-        setHasMoreMovies(allAvailableMovies.length > contentWithUserData.length)
+        // Проверяем, есть ли еще фильмы в пуле
+        const stats = tmdbService.getApiStats()
+        setHasMoreMovies(stats.moviePoolSize > contentWithUserData.length)
       } else {
         setHasMoreMovies(contentWithUserData.length >= 20)
       }
@@ -185,13 +215,15 @@ export default function Home() {
       if (page === 1) {
         setMovies(resultsWithUserData)
         setAllMovies(resultsWithUserData)
+        // При поиске не обновляем fullMovieDatabase
         setCurrentPage(1)
       } else {
         const newMovies = [...allMovies, ...resultsWithUserData].filter(
-          (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
+          (movie, index, self) => self.findIndex(m => m.tmdbId === movie.tmdbId) === index
         )
         setMovies(newMovies)
         setAllMovies(newMovies)
+        // При поиске не обновляем fullMovieDatabase
         setCurrentPage(page)
       }
 
@@ -223,18 +255,17 @@ export default function Home() {
         if (moreMovies.length > 0) {
           const moreMoviesWithUserData = applyUserDataToMovies(moreMovies)
           const uniqueMovies = [...allMovies, ...moreMoviesWithUserData].filter(
-            (movie, index, self) => self.findIndex(m => m.id === movie.id) === index
+            (movie, index, self) => self.findIndex(m => m.tmdbId === movie.tmdbId) === index
           )
           setMovies(uniqueMovies)
           setAllMovies(uniqueMovies)
+          setFullMovieDatabase(uniqueMovies) // Обновляем полную базу
           setCurrentPage((prev) => prev + 1)
           
           // Проверяем есть ли еще фильмы для загрузки
           if (source === "local") {
-            const movieService = new MovieService()
-            await movieService.initialize()
-            const totalAvailable = await movieService.getPopularMovies(1, 1000)
-            setHasMoreMovies(uniqueMovies.length < totalAvailable.length)
+            const stats = tmdbService.getApiStats()
+            setHasMoreMovies(uniqueMovies.length < stats.moviePoolSize && moreMovies.length > 0)
           } else {
             setHasMoreMovies(moreMovies.length >= 20)
           }
@@ -460,13 +491,13 @@ export default function Home() {
     
     switch (activeTab) {
       case "watchlist":
-        // Фильмы в списке "Посмотрю позже"
-        baseMovies = allMovies.filter((movie) => watchlistMovieIds.includes(movie.id))
+        // Фильмы в списке "Посмотрю позже" - используем полную базу
+        baseMovies = fullMovieDatabase.filter((movie) => watchlistMovieIds.includes(movie.id))
         break
       case "watched":
-        // Фильмы в списке "Просмотрено"
+        // Фильмы в списке "Просмотрено" - используем полную базу
         const watchedIds = watchedMovies.map(w => w.movieId)
-        baseMovies = allMovies.filter((movie) => watchedIds.includes(movie.id))
+        baseMovies = fullMovieDatabase.filter((movie) => watchedIds.includes(movie.id))
         break
       default:
         // Для вкладки "Все" используем уже отфильтрованные movies
